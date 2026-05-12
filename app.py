@@ -10,6 +10,8 @@ import streamlit as st
 import altair as alt
 from streamlit_option_menu import option_menu
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
+import sqlite3
+import time
 
 st.set_page_config(
     page_title="SupplySyncAI",
@@ -344,19 +346,6 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-# MYSQL LOADER FUNCTION
-@st.cache_data
-def load_data():
-    conn = mysql.connector.connect(
-        host="localhost",        # change if needed
-        user="root",             # your username
-        password="",
-        database="table"
-    )
-    query = "SELECT * FROM data_model"   
-    df = pd.read_sql(query, conn)
-    conn.close()
-    return df
 
 
 # CENTERED SMALL PLOT FUNCTION
@@ -423,44 +412,86 @@ st.markdown(
     unsafe_allow_html=True
 )
 
+@st.cache_data
+def load_data():
 
+    conn = sqlite3.connect("database.db")
 
-# Make sure session key exists
+    query = "SELECT * FROM data_model"
+
+    df = pd.read_sql(query, conn)
+
+    conn.close()
+
+    return df
+
+# Session state
 if "df" not in st.session_state:
     st.session_state.df = None
 
-# Load Button
-if st.button("Load Data"):
-    
+# Button to load data
+if st.button("Load Data", key="load_database_button"):
+
+    start_time = time.time()
+
     st.session_state.df = load_data()
-    
 
+    end_time = time.time()
 
-# Show preview if loaded
+    load_time = round(end_time - start_time, 2)
+
+    st.success(f"Database loaded successfully in {load_time} seconds")
+
 df = st.session_state.df
 
 if df is not None:
-    st.markdown(
-    "<h3 style='color:#000000;'>Data Preview</h3>",
-    unsafe_allow_html=True
-)
+
+    st.markdown(f"""
+        <div style="
+            background-color:#0B2C5D;
+            padding:15px 18px;
+            border-radius:10px;
+            color:white;
+            margin-top:8px;
+            margin-bottom:8px;    
+        ">
+            <h4 style="margin:0;">
+                Data Preview 
+            </h4>
+        </div>
+        """, unsafe_allow_html=True)
 
     render_html_table(
         df.head(20),
         max_height=260
-    )   
+    )
 
-    st.markdown(
-    f"<p style='color:#000000; font-weight:600;'>Shape: {df.shape[0]} rows × {df.shape[1]} columns</p>",
-    unsafe_allow_html=True
-)
+    st.markdown(f"""
+        <div style="
+            background-color:#2F75B5;
+            padding:16px;
+            border-radius:12px;
+            color:white;
+            font-size:16px;
+            line-height:1.7;
+            margin-bottom:20px;
+        ">
+
+        <p style='font-weight:600;'>
+            Shape: {df.shape[0]} rows × {df.shape[1]} columns
+        </p>
+
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
 else:
+
     st.markdown(
-    "<p style='color:#000000;'>Click the button above to load the dataset.</p>",
-    unsafe_allow_html=True
-)
-
-
+        "<p style='color:#000000;'>Click the button above to load the dataset.</p>",
+        unsafe_allow_html=True
+    )
     
 # ============================================================
 # STEP 2 – DATA PRE-PROCESSING (USER-CONTROLLED PIPELINE)
