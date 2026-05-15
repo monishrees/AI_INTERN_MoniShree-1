@@ -1747,46 +1747,103 @@ elif eda_option == "Sales Overview":
     st.write("")
     st.write("")
 
+    # ================= ROW 1 =================
+    col1, col2 = st.columns(2)
 
-    if "Date" in df.columns and col_rev:
-   
+    with col1: 
+        if "Date" in df.columns and col_rev:
             st.markdown(
-        """
-        <div style="
-            background-color:#2F75B5;
-            padding:18px 25px;
-            border-radius:10px;
-            font-size:20px;
-            color:white;
-            margin-top:20px;
-            margin-bottom:10px;
-            text-align:center;
-        ">
-            <b>Sales By Year</b>
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
-    df["Date"] = pd.to_datetime(df["Date"], errors="coerce")
-    df = df.dropna(subset=["Date"])
+            """
+            <div style="
+                background-color:#2F75B5;
+                padding:18px 25px;
+                border-radius:10px;
+                font-size:20px;
+                color:white;
+                margin-top:20px;
+                margin-bottom:10px;
+                text-align:center;
+            ">
+                <b>Sales By Year</b>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+        df["Date"] = pd.to_datetime(df["Date"], errors="coerce")
+        df = df.dropna(subset=["Date"])
 
-    df["Year"] = df["Date"].dt.year
-    df["Quarter"] = df["Date"].dt.to_period("Q").astype(str)
-    df["Month"] = df["Date"].dt.to_period("M").astype(str)
+        df["Year"] = df["Date"].dt.year
+        df["Quarter"] = df["Date"].dt.to_period("Q").astype(str)
+        df["Month"] = df["Date"].dt.to_period("M").astype(str)
 
-    sales_by_year = (
-        df.groupby("Year")[col_rev]
-        .sum()
-        .sort_index()
-    )
+        sales_by_year = (
+            df.groupby("Year")[col_rev]
+            .sum()
+            .sort_index()
+        )
+        
+        chart=(
+                alt.Chart(sales_by_year.reset_index())
+                .mark_bar(color="#001F5C",cornerRadiusEnd=6)
+                .encode(
+                    x=alt.X("Year:O", title="Year"),
+                    y=alt.Y(f"{col_rev}:Q", title="Revenue",scale=alt.Scale(padding=10)),
+                    tooltip=["Year", col_rev]
+                )
+                .properties(
+                    height=380,
+                    background="#00D05E",
+                    padding={"top": 10, "left": 10, "right": 10, "bottom": 10}
+                )
+                .configure_view(
+                    fill="#00D05E",
+                    strokeOpacity=0
+                )
+                .configure_axis(
+                    labelColor="#000000",
+                    titleColor="#000000",
+                    gridColor="rgba(0,0,0,0.2)",
+                    domainColor="rgba(0,0,0,0.3)"
+                )
+            )
+
+        st.altair_chart(chart, use_container_width=True)
+   
     
-    chart = (
-            alt.Chart(sales_by_year.reset_index())
-            .mark_bar(color="#001F5C",cornerRadiusEnd=6)
+    with col2:
+        st.markdown(
+            """
+            <div style="
+                background-color:#2F75B5;
+                padding:18px 25px;
+                border-radius:10px;
+                font-size:20px;
+                color:white;
+                margin-top:20px;
+                margin-bottom:10px;
+                text-align:center;
+            ">
+                <b>Sales By Quaters</b>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+
+        # Aggregate revenue by quarter
+        sales_by_quarter = (
+            df.groupby("Quarter")[col_rev]
+            .sum()
+            .sort_index()
+        )
+
+        # Altair chart with SAME layout/template as yearly chart
+        chart_quarter = (
+            alt.Chart(sales_by_quarter.reset_index())
+            .mark_bar(color="#001F5C", cornerRadiusEnd=6)
             .encode(
-                x=alt.X("Year:O", title="Year"),
-                y=alt.Y(f"{col_rev}:Q", title="Revenue",scale=alt.Scale(padding=10)),
-                tooltip=["Year", col_rev]
+                x=alt.X("Quarter:O", title="Quarter"),
+                y=alt.Y(f"{col_rev}:Q", title="Revenue", scale=alt.Scale(padding=10)),
+                tooltip=["Quarter", col_rev]
             )
             .properties(
                 height=380,
@@ -1805,226 +1862,228 @@ elif eda_option == "Sales Overview":
             )
         )
 
-    st.altair_chart(chart, use_container_width=True)
-   
-    
+        st.altair_chart(chart_quarter, use_container_width=True)
 
-    st.markdown(
-        """
-        <div style="
-            background-color:#2F75B5;
-            padding:18px 25px;
-            border-radius:10px;
-            font-size:20px;
-            color:white;
-            margin-top:20px;
-            margin-bottom:10px;
-            text-align:center;
-        ">
-            <b>Sales By Quaters</b>
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
+# ================= ROW 2 =================
 
-    # Aggregate revenue by quarter
-    sales_by_quarter = (
-        df.groupby("Quarter")[col_rev]
-        .sum()
-        .sort_index()
-    )
-
-    # Altair chart with SAME layout/template as yearly chart
-    chart_quarter = (
-        alt.Chart(sales_by_quarter.reset_index())
-        .mark_bar(color="#001F5C", cornerRadiusEnd=6)
-        .encode(
-            x=alt.X("Quarter:O", title="Quarter"),
-            y=alt.Y(f"{col_rev}:Q", title="Revenue", scale=alt.Scale(padding=10)),
-            tooltip=["Quarter", col_rev]
+    col3, col4 = st.columns(2)
+    with col3:
+        st.markdown(
+            """
+            <div style="
+                background-color:#2F75B5;
+                padding:18px 25px;
+                border-radius:10px;
+                font-size:20px;
+                color:white;
+                margin-top:20px;
+                margin-bottom:10px;
+                text-align:center;
+            ">
+                <b>Sales By Month</b>
+            </div>
+            """,
+            unsafe_allow_html=True
         )
-        .properties(
-            height=380,
-            background="#00D05E",
-            padding={"top": 10, "left": 10, "right": 10, "bottom": 10}
+        # Aggregate revenue by month
+        sales_by_month = (
+            df.groupby("Month")[col_rev]
+            .sum()
+            .sort_index()
         )
-        .configure_view(
-            fill="#00D05E",
-            strokeOpacity=0
+
+        # Altair chart with SAME layout/template
+        chart_month = (
+            alt.Chart(sales_by_month.reset_index())
+            .mark_bar(color="#001F5C", cornerRadiusEnd=6)
+            .encode(
+                x=alt.X("Month:O", title="Month"),
+                y=alt.Y(f"{col_rev}:Q", title="Revenue", scale=alt.Scale(padding=10)),
+                tooltip=["Month", col_rev]
+            )
+            .properties(
+                height=380,
+                background="#00D05E",
+                padding={"top": 10, "left": 10, "right": 10, "bottom": 10}
+            )
+            .configure_view(
+                fill="#00D05E",
+                strokeOpacity=0
+            )
+            .configure_axis(
+                labelColor="#000000",
+                titleColor="#000000",
+                gridColor="rgba(0,0,0,0.2)",
+                domainColor="rgba(0,0,0,0.3)"
+            )
         )
-        .configure_axis(
-            labelColor="#000000",
-            titleColor="#000000",
-            gridColor="rgba(0,0,0,0.2)",
-            domainColor="rgba(0,0,0,0.3)"
+
+        st.altair_chart(chart_month, use_container_width=True)
+
+    with col4:
+        st.markdown(
+            """
+            <div style="
+                background-color:#2F75B5;
+                padding:18px 25px;
+                border-radius:10px;
+                font-size:20px;
+                color:white;
+                margin-top:20px;
+                margin-bottom:10px;
+                text-align:center;
+            ">
+                <b>Sales By Day</b>
+            </div>
+            """,
+            unsafe_allow_html=True
         )
-    )
-
-    st.altair_chart(chart_quarter, use_container_width=True)
-
-
-    st.markdown(
-        """
-        <div style="
-            background-color:#2F75B5;
-            padding:18px 25px;
-            border-radius:10px;
-            font-size:20px;
-            color:white;
-            margin-top:20px;
-            margin-bottom:10px;
-            text-align:center;
-        ">
-            <b>Sales By Month</b>
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
-    # Aggregate revenue by month
-    sales_by_month = (
-        df.groupby("Month")[col_rev]
-        .sum()
-        .sort_index()
-    )
-
-    # Altair chart with SAME layout/template
-    chart_month = (
-        alt.Chart(sales_by_month.reset_index())
-        .mark_bar(color="#001F5C", cornerRadiusEnd=6)
-        .encode(
-            x=alt.X("Month:O", title="Month"),
-            y=alt.Y(f"{col_rev}:Q", title="Revenue", scale=alt.Scale(padding=10)),
-            tooltip=["Month", col_rev]
+        # Aggregate revenue by Date
+        sales_by_Date = (
+            df.groupby("Date")[col_rev]
+            .sum()
+            .sort_index()
         )
-        .properties(
-            height=380,
-            background="#00D05E",
-            padding={"top": 10, "left": 10, "right": 10, "bottom": 10}
+
+        # Altair chart with SAME layout/template
+        chart_Date = (
+            alt.Chart(sales_by_Date.reset_index())
+            .mark_bar(color="#001F5C", cornerRadiusEnd=6)
+            .encode(
+                x=alt.X("Date:T", title="Date", axis=alt.Axis(format="%Y-%m-%d")),
+                y=alt.Y(f"{col_rev}:Q", title="Revenue", scale=alt.Scale(padding=10)),
+                tooltip=["Date", col_rev]
+            )
+            .properties(
+                height=380,
+                background="#00D05E",
+                padding={"top": 10, "left": 10, "right": 10, "bottom": 10}
+            )
+            .configure_view(
+                fill="#00D05E",
+                strokeOpacity=0
+            )
+            .configure_axis(
+                labelColor="#000000",
+                titleColor="#000000",
+                gridColor="rgba(0,0,0,0.2)",
+                domainColor="rgba(0,0,0,0.3)"
+            )
         )
-        .configure_view(
-            fill="#00D05E",
-            strokeOpacity=0
-        )
-        .configure_axis(
-            labelColor="#000000",
-            titleColor="#000000",
-            gridColor="rgba(0,0,0,0.2)",
-            domainColor="rgba(0,0,0,0.3)"
-        )
-    )
 
-    st.altair_chart(chart_month, use_container_width=True)
+        st.altair_chart(chart_Date, use_container_width=True)
 
+# ================= ROW 3 =================
+    col5, col6 = st.columns(2)
 
-
-
-
-    if col_store and col_rev:
+    with col5:
+        if col_store and col_rev:
             st.markdown(
-        """
-        <div style="
-            background-color:#2F75B5;
-            padding:18px 25px;
-            border-radius:10px;
-            font-size:20px;
-            color:white;
-            margin-top:20px;
-            margin-bottom:10px;
-            text-align:center;
-        ">
-            <b>Sales By Store</b>
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
-    # Aggregate revenue by store
-    sales_store = (
-        df.groupby(col_store)[col_rev]
-        .sum()
-        .sort_values(ascending=False)
-    )
+            """
+            <div style="
+                background-color:#2F75B5;
+                padding:18px 25px;
+                border-radius:10px;
+                font-size:20px;
+                color:white;
+                margin-top:20px;
+                margin-bottom:10px;
+                text-align:center;
+            ">
+                <b>Sales By Store</b>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+        # Aggregate revenue by store
+        sales_store = (
+            df.groupby(col_store)[col_rev]
+            .sum()
+            .sort_values(ascending=False)
+        )
 
-    # Altair chart with SAME layout/template
-    chart_store = (
-        alt.Chart(sales_store.reset_index())
-        .mark_bar(color="#001F5C", cornerRadiusEnd=6)
-        .encode(
-            x=alt.X(f"{col_store}:O", title="Store"),
-            y=alt.Y(f"{col_rev}:Q", title="Revenue", scale=alt.Scale(padding=10)),
-            tooltip=[col_store, col_rev]
+        # Altair chart with SAME layout/template
+        chart_store = (
+            alt.Chart(sales_store.reset_index())
+            .mark_bar(color="#001F5C", cornerRadiusEnd=6)
+            .encode(
+                x=alt.X(f"{col_store}:O", title="Store"),
+                y=alt.Y(f"{col_rev}:Q", title="Revenue", scale=alt.Scale(padding=10)),
+                tooltip=[col_store, col_rev]
+            )
+            .properties(
+                height=380,
+                background="#00D05E",
+                padding={"top": 10, "left": 10, "right": 10, "bottom": 10}
+            )
+            .configure_view(
+                fill="#00D05E",
+                strokeOpacity=0
+            )
+            .configure_axis(
+                labelColor="#000000",
+                titleColor="#000000",
+                gridColor="rgba(0,0,0,0.2)",
+                domainColor="rgba(0,0,0,0.3)"
+            )
         )
-        .properties(
-            height=380,
-            background="#00D05E",
-            padding={"top": 10, "left": 10, "right": 10, "bottom": 10}
-        )
-        .configure_view(
-            fill="#00D05E",
-            strokeOpacity=0
-        )
-        .configure_axis(
-            labelColor="#000000",
-            titleColor="#000000",
-            gridColor="rgba(0,0,0,0.2)",
-            domainColor="rgba(0,0,0,0.3)"
-        )
-    )
 
-    st.altair_chart(chart_store, use_container_width=True)
+        st.altair_chart(chart_store, use_container_width=True)
 
-    if col_channel and col_rev:
-            st.markdown(
-        """
-        <div style="
-            background-color:#2F75B5;
-            padding:18px 25px;
-            border-radius:10px;
-            font-size:20px;
-            color:white;
-            margin-top:20px;
-            margin-bottom:10px;
-            text-align:center;
-        ">
-            <b>Sales By Sales Channels</b>
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
+    with col6:
+        if col_channel and col_rev:
+                st.markdown(
+            """
+            <div style="
+                background-color:#2F75B5;
+                padding:18px 25px;
+                border-radius:10px;
+                font-size:20px;
+                color:white;
+                margin-top:20px;
+                margin-bottom:10px;
+                text-align:center;
+            ">
+                <b>Sales By Sales Channels</b>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
 
-    # Aggregate revenue by channel
-    sales_channel = (
-        df.groupby(col_channel)[col_rev]
-        .sum()
-        .sort_values(ascending=False)
-    )
+        # Aggregate revenue by channel
+        sales_channel = (
+            df.groupby(col_channel)[col_rev]
+            .sum()
+            .sort_values(ascending=False)
+        )
 
-    # Altair chart with SAME layout/template
-    chart_channel = (
-        alt.Chart(sales_channel.reset_index())
-        .mark_bar(color="#001F5C", cornerRadiusEnd=6)
-        .encode(
-            x=alt.X(f"{col_channel}:O", title="Channel"),
-            y=alt.Y(f"{col_rev}:Q", title="Revenue", scale=alt.Scale(padding=10)),
-            tooltip=[col_channel, col_rev]
+        # Altair chart with SAME layout/template
+        chart_channel = (
+            alt.Chart(sales_channel.reset_index())
+            .mark_bar(color="#001F5C", cornerRadiusEnd=6)
+            .encode(
+                x=alt.X(f"{col_channel}:O", title="Channel"),
+                y=alt.Y(f"{col_rev}:Q", title="Revenue", scale=alt.Scale(padding=10)),
+                tooltip=[col_channel, col_rev]
+            )
+            .properties(
+                height=380,
+                background="#00D05E",
+                padding={"top": 10, "left": 10, "right": 10, "bottom": 10}
+            )
+            .configure_view(
+                fill="#00D05E",
+                strokeOpacity=0
+            )
+            .configure_axis(
+                labelColor="#000000",
+                titleColor="#000000",
+                gridColor="rgba(0,0,0,0.2)",
+                domainColor="rgba(0,0,0,0.3)"
+            )
         )
-        .properties(
-            height=380,
-            background="#00D05E",
-            padding={"top": 10, "left": 10, "right": 10, "bottom": 10}
-        )
-        .configure_view(
-            fill="#00D05E",
-            strokeOpacity=0
-        )
-        .configure_axis(
-            labelColor="#000000",
-            titleColor="#000000",
-            gridColor="rgba(0,0,0,0.2)",
-            domainColor="rgba(0,0,0,0.3)"
-        )
-    )
 
-    st.altair_chart(chart_channel, use_container_width=True)
+        st.altair_chart(chart_channel, use_container_width=True)
 
 # ============================================================
 # FOOTER
