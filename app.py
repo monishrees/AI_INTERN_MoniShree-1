@@ -1466,13 +1466,13 @@ def nav_button(label, value):
         st.markdown(
             f"""
             <div style="
-                background-color:#4F97EE
-;
+                background-color:#4F97EE;
                 color:white;
-                padding:14px;
+                padding:16px;
                 border-radius:10px;
                 font-weight:600;
-                text-align:center;
+                font-size:12px;
+                text-align:centre;
                 margin-bottom:12px;
             ">
                 {label}
@@ -1494,11 +1494,11 @@ with st.expander(" ", expanded=True):
     with row1[1]:
         nav_button("Sales Overview", "Sales Overview")
     with row1[2]:
-        nav_button("Demand Forecasting Analysis", "Demand Forecasting Analysis")
+        nav_button("Demand Analysis", "Demand Analysis")
     with row1[3]:
         nav_button("Inventory & Stock Analysis", "Inventory & Stock Analysis")
     with row1[4]:
-        nav_button("Predictive Replenishment Analysis", "Predictive Replenishment Analysis")
+        nav_button("Replenishment Analysis", "Replenishment Analysis")
 
     with row2[0]:
         nav_button("Supplier & Lead Time Analysis", "Supplier & Lead Time Analysis")
@@ -1656,7 +1656,7 @@ elif eda_option == "Sales Overview":
         border-radius:12px;
         color:white;
         font-size:16px;
-        line-height:1.6;
+        line-height:1.7;
         margin-bottom:20px;
     ">
 
@@ -1777,19 +1777,27 @@ elif eda_option == "Sales Overview":
         df["Month"] = df["Date"].dt.to_period("M").astype(str)
 
         sales_by_year = (
-            df.groupby("Year")[col_rev]
-            .sum()
-            .sort_index()
+            df.groupby("Year")
+            .agg({
+                col_rev: "sum",
+                col_qty: "sum"
+            })
+            .reset_index()
+            .sort_values("Year")
         )
         
         chart=(
-                alt.Chart(sales_by_year.reset_index())
-                .mark_bar(color="#001F5C",cornerRadiusEnd=6)
-                .encode(
-                    x=alt.X("Year:O", title="Year"),
-                    y=alt.Y(f"{col_rev}:Q", title="Revenue",scale=alt.Scale(padding=10)),
-                    tooltip=["Year", col_rev]
-                )
+            alt.Chart(sales_by_year.reset_index())
+            .mark_bar(color="#001F5C",cornerRadiusEnd=6)
+            .encode(
+                x=alt.X("Year:O", title="Year"),
+                y=alt.Y(f"{col_rev}:Q", title="Sales",scale=alt.Scale(padding=10)),
+                tooltip=[ 
+                    alt.Tooltip("Year:O", title="Year"),
+                    alt.Tooltip(f"{col_rev}:Q", title="Sales", format=",.2f"),
+                    alt.Tooltip(f"{col_qty}:Q", title="Quantity Sold", format=",")
+                ]
+            )
                 .properties(
                     height=380,
                     background="#00D05E",
@@ -1823,7 +1831,7 @@ elif eda_option == "Sales Overview":
                 margin-bottom:10px;
                 text-align:center;
             ">
-                <b>Sales By Quaters</b>
+                <b>Sales By Quater</b>
             </div>
             """,
             unsafe_allow_html=True
@@ -1831,9 +1839,13 @@ elif eda_option == "Sales Overview":
 
         # Aggregate revenue by quarter
         sales_by_quarter = (
-            df.groupby("Quarter")[col_rev]
-            .sum()
-            .sort_index()
+            df.groupby("Quarter")
+            .agg({
+                col_rev: "sum",
+                col_qty : "sum"
+            })
+            .reset_index()
+            .sort_values("Quarter")
         )
 
         # Altair chart with SAME layout/template as yearly chart
@@ -1842,8 +1854,12 @@ elif eda_option == "Sales Overview":
             .mark_bar(color="#001F5C", cornerRadiusEnd=6)
             .encode(
                 x=alt.X("Quarter:O", title="Quarter"),
-                y=alt.Y(f"{col_rev}:Q", title="Revenue", scale=alt.Scale(padding=10)),
-                tooltip=["Quarter", col_rev]
+                y=alt.Y(f"{col_rev}:Q", title="Sales", scale=alt.Scale(padding=10)),
+                tooltip=[
+                    alt.Tooltip("Quarter:O", title="Quarter"),
+                    alt.Tooltip(f"{col_rev}:Q", title="Sales", format=",.2f"),
+                    alt.Tooltip(f"{col_qty}:Q", title="Quantity Sold", format=",")
+                    ]
             )
             .properties(
                 height=380,
@@ -1887,9 +1903,13 @@ elif eda_option == "Sales Overview":
         )
         # Aggregate revenue by month
         sales_by_month = (
-            df.groupby("Month")[col_rev]
-            .sum()
-            .sort_index()
+            df.groupby("Month")
+            .agg({
+                col_rev: "sum",
+                col_qty : "sum"   # replace with your quantity column name if different
+            })
+            .reset_index()
+            .sort_values("Month")
         )
 
         # Altair chart with SAME layout/template
@@ -1898,8 +1918,12 @@ elif eda_option == "Sales Overview":
             .mark_bar(color="#001F5C", cornerRadiusEnd=6)
             .encode(
                 x=alt.X("Month:O", title="Month"),
-                y=alt.Y(f"{col_rev}:Q", title="Revenue", scale=alt.Scale(padding=10)),
-                tooltip=["Month", col_rev]
+                y=alt.Y(f"{col_rev}:Q", title="Sales", scale=alt.Scale(padding=10)),
+                tooltip=[
+                    alt.Tooltip("Month:O", title="Month"),
+                    alt.Tooltip(f"{col_rev}:Q", title="Sales", format=",.2f"),
+                    alt.Tooltip(f"{col_qty}:Q", title="Quantity Sold", format=",")
+                ]
             )
             .properties(
                 height=380,
@@ -1933,26 +1957,47 @@ elif eda_option == "Sales Overview":
                 margin-bottom:10px;
                 text-align:center;
             ">
-                <b>Sales By Day</b>
+                <b>Sales By Week</b>
             </div>
             """,
             unsafe_allow_html=True
         )
-        # Aggregate revenue by Date
-        sales_by_Date = (
-            df.groupby("Date")[col_rev]
-            .sum()
-            .sort_index()
+        df[col_date] = pd.to_datetime(df[col_date], errors="coerce")
+        df = df.dropna(subset=[col_date])
+
+        # Create Week column
+        df["Year"] = df[col_date].dt.year
+        df["Week_Num"] = df[col_date].dt.isocalendar().week
+
+        df["Week"] = (
+            df["Year"].astype(str)
+            + "-W"
+            + df["Week_Num"].astype(str).str.zfill(2)
+        )
+
+        # Aggregate revenue by Week
+        sales_by_Week = (
+            df.groupby("Week")
+            .agg({
+                col_rev: "sum",
+                col_qty: "sum"
+            })
+            .reset_index()
+            .sort_values("Week")
         )
 
         # Altair chart with SAME layout/template
-        chart_Date = (
-            alt.Chart(sales_by_Date.reset_index())
+        chart_Week = (
+            alt.Chart(sales_by_Week.reset_index())
             .mark_bar(color="#001F5C", cornerRadiusEnd=6)
             .encode(
-                x=alt.X("Date:T", title="Date", axis=alt.Axis(format="%Y-%m-%d")),
-                y=alt.Y(f"{col_rev}:Q", title="Revenue", scale=alt.Scale(padding=10)),
-                tooltip=["Date", col_rev]
+                x=alt.X("Week:O", title="Week"),
+                y=alt.Y(f"{col_rev}:Q", title="Sales", scale=alt.Scale(padding=10)),
+                tooltip=[
+                    alt.Tooltip("Week:O", title="Week"),
+                    alt.Tooltip(f"{col_rev}:Q", title="Sales", format=",.2f"),
+                    alt.Tooltip(f"{col_qty}:Q", title="Quantity Sold", format=",")
+                ]
             )
             .properties(
                 height=380,
@@ -1971,7 +2016,7 @@ elif eda_option == "Sales Overview":
             )
         )
 
-        st.altair_chart(chart_Date, use_container_width=True)
+        st.altair_chart(chart_Week, use_container_width=True)
 
 # ================= ROW 3 =================
     col5, col6 = st.columns(2)
@@ -2008,8 +2053,11 @@ elif eda_option == "Sales Overview":
             .mark_bar(color="#001F5C", cornerRadiusEnd=6)
             .encode(
                 x=alt.X(f"{col_store}:O", title="Store"),
-                y=alt.Y(f"{col_rev}:Q", title="Revenue", scale=alt.Scale(padding=10)),
-                tooltip=[col_store, col_rev]
+                y=alt.Y(f"{col_rev}:Q", title="Sales", scale=alt.Scale(padding=10)),
+                tooltip=[
+                    col_store,
+                    alt.Tooltip(f"{col_rev}:Q", title="Sales", format=",.2f")
+                ]
             )
             .properties(
                 height=380,
@@ -2063,8 +2111,9 @@ elif eda_option == "Sales Overview":
             .mark_bar(color="#001F5C", cornerRadiusEnd=6)
             .encode(
                 x=alt.X(f"{col_channel}:O", title="Channel"),
-                y=alt.Y(f"{col_rev}:Q", title="Revenue", scale=alt.Scale(padding=10)),
-                tooltip=[col_channel, col_rev]
+                y=alt.Y(f"{col_rev}:Q", title="Sales", scale=alt.Scale(padding=10)),
+                tooltip=[col_channel,
+                    alt.Tooltip(f"{col_rev}:Q", title="Sales", format=",.2f")]
             )
             .properties(
                 height=380,
@@ -2085,8 +2134,32 @@ elif eda_option == "Sales Overview":
 
         st.altair_chart(chart_channel, use_container_width=True)
 
+    st.markdown(
+            """
+            <div style="
+                background-color:#2F75B5;
+                padding:28px;
+                border-radius:12px;
+                color:white;
+                font-size:16px;
+                line-height:1.6;
+                margin-bottom:20px;
+            ">
+
+            <b>Sales Analysis</b> <br>
+            <li><b>Sales By Year:</b> Analyzes annual sales performance to identify long-term business trends.</li>
+            <li><b>Sales By Quarter:</b> Evaluates quarterly sales distribution to detect seasonal demand patterns.</li>
+            <li><b>Sales By Month:</b> Examines monthly sales behavior for detailed trend analysis .</li>
+            <li><b>Sales By Week:</b> Monitors weekly sales performance to identify short-term demand variations.</li>
+            <li><b>Sales By Store:</b> Assesses sales contribution across different stores .</li>
+            <li><b>Sales Through Channel:</b> Evaluates the performance of each sales channel and identifies the most effective channel for generating sales.</li><br>
+
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
     
-elif eda_option == "Demand Forecasting Analysis":
+elif eda_option == "Demand Analysis":
 
     st.markdown(
     """
@@ -2423,256 +2496,27 @@ elif eda_option == "Demand Forecasting Analysis":
 
         st.altair_chart(chart_monthly, use_container_width=True)
 
-        # =========================================================
-    # ROW 3 → MOVING AVERAGE & FUTURE FORECAST
-    # =========================================================
-
-    st.write("")
-    st.write("")
-
-    col5, col6 = st.columns(2)
-
-    # =========================================================
-    # MOVING AVERAGE DEMAND TREND
-    # =========================================================
-
-    with col5:
-
-        st.markdown(
+    st.markdown(
             """
             <div style="
                 background-color:#2F75B5;
-                padding:18px 25px;
-                border-radius:10px;
-                font-size:20px;
+                padding:28px;
+                border-radius:12px;
                 color:white;
-                margin-top:20px;
-                margin-bottom:10px;
-                text-align:center;
+                font-size:16px;
+                line-height:1.6;
+                margin-bottom:20px;
             ">
-                <b>Moving Average Demand Trend</b>
+
+            <b>Demand Analysis</b> <br>
+            <li><b>High-Demand Categories:</b> Analyzes category-wise demand to identify the most popular product segments.</li>
+            <li><b>Top High-Demand Products:</b> Evaluates product-wise demand to determine the highest-selling products.</li>
+            <li><b>Season-wise Demand Analysis:</b> Examines seasonal variations in demand to identify peak and low-demand seasons.</li>
+            <li><b>Monthly Seasonal Demand Trend:</b> Visualizes monthly demand trends to support forecasting and inventory planning.</li>
             </div>
             """,
             unsafe_allow_html=True
         )
-
-        # Convert Date column
-        df["Date"] = pd.to_datetime(
-            df["Date"],
-            errors="coerce"
-        )
-
-        # Remove null dates
-        df = df.dropna(subset=["Date"])
-
-        # Aggregate Daily Demand
-        moving_avg_df = (
-            df.groupby("Date")["Quantity_Sold"]
-            .sum()
-            .reset_index()
-            .sort_values("Date")
-        )
-
-        # Calculate 7-Day Moving Average
-        moving_avg_df["7_Day_MA"] = (
-            moving_avg_df["Quantity_Sold"]
-            .rolling(window=7)
-            .mean()
-        )
-
-        # Altair Chart
-        moving_chart = (
-            alt.Chart(moving_avg_df)
-            .mark_line(
-                color="#001F5C",
-                strokeWidth=4
-            )
-            .encode(
-                x=alt.X(
-                    "Date:T",
-                    title="Date"
-                ),
-                y=alt.Y(
-                    "7_Day_MA:Q",
-                    title="7-Day Moving Average"
-                ),
-                tooltip=[
-                    alt.Tooltip("Date:T", title="Date"),
-                    alt.Tooltip("7_Day_MA:Q", title="Moving Avg")
-                ]
-            )
-            .properties(
-                height=400,
-                background="#00D05E",
-                padding={
-                    "top": 10,
-                    "left": 10,
-                    "right": 10,
-                    "bottom": 10
-                }
-            )
-            .configure_view(
-                fill="#00D05E",
-                strokeOpacity=0
-            )
-            .configure_axis(
-                labelColor="#000000",
-                titleColor="#000000",
-                gridColor="rgba(0,0,0,0.2)",
-                domainColor="rgba(0,0,0,0.3)"
-            )
-        )
-
-        st.altair_chart(moving_chart, use_container_width=True)
-
-    # =========================================================
-    # FUTURE DEMAND FORECAST (2025–2026 MANUAL PREDICTION)
-    # =========================================================
-
-    with col6:
-
-        st.markdown(
-            """
-            <div style="
-                background-color:#2F75B5;
-                padding:18px 25px;
-                border-radius:10px;
-                font-size:20px;
-                color:white;
-                margin-top:20px;
-                margin-bottom:10px;
-                text-align:center;
-            ">
-                <b>Future Demand Forecast</b>
-            </div>
-            """,
-            unsafe_allow_html=True
-        )
-
-        # -----------------------------------------------------
-        # PREPARE DATA
-        # -----------------------------------------------------
-
-        df["Date"] = pd.to_datetime(
-            df["Date"],
-            errors="coerce"
-        )
-
-        df = df.dropna(subset=["Date"])
-
-        # Aggregate yearly demand
-        yearly_demand = (
-            df.groupby(df["Date"].dt.year)["Quantity_Sold"]
-            .sum()
-            .reset_index()
-        )
-
-        yearly_demand.columns = [
-            "Year",
-            "Demand"
-        ]
-
-        # -----------------------------------------------------
-        # CREATE FUTURE FORECAST
-        # -----------------------------------------------------
-
-        # Simple growth forecasting
-        latest_demand = yearly_demand["Demand"].iloc[-1]
-
-        # Example growth percentages
-        forecast_2025 = latest_demand * 1.10
-        forecast_2026 = forecast_2025 * 1.12
-
-        # Forecast dataframe
-        forecast_df = pd.DataFrame({
-            "Year": [2025, 2026],
-            "Demand": [
-                forecast_2025,
-                forecast_2026
-            ],
-            "Type": [
-                "Forecast",
-                "Forecast"
-            ]
-        })
-
-        # Historical dataframe
-        historical_df = yearly_demand.copy()
-        historical_df["Type"] = "Historical"
-
-        # Combine
-        final_df = pd.concat(
-            [historical_df, forecast_df],
-            ignore_index=True
-        )
-
-        # -----------------------------------------------------
-        # FORECAST CHART
-        # -----------------------------------------------------
-
-        forecast_chart = (
-            alt.Chart(final_df)
-            .mark_line(
-                point=True,
-                strokeWidth=4
-            )
-            .encode(
-
-                x=alt.X(
-                    "Year:O",
-                    title="Year"
-                ),
-
-                y=alt.Y(
-                    "Demand:Q",
-                    title="Demand Quantity"
-                ),
-
-                color=alt.Color(
-                    "Type:N",
-                    scale=alt.Scale(
-                        domain=[
-                            "Historical",
-                            "Forecast"
-                        ],
-                        range=[
-                            "#001F5C",
-                            "#FF6B00"
-                        ]
-                    ),
-                    title="Demand Type"
-                ),
-
-                tooltip=[
-                    alt.Tooltip("Date:T", title="Date"),
-                    alt.Tooltip("Demand_Type:N", title="Type"),
-                    alt.Tooltip("Quantity:Q", title="Quantity")
-                ]
-            )
-            .properties(
-                height=400,
-                background="#00D05E",
-                padding={
-                    "top": 10,
-                    "left": 10,
-                    "right": 10,
-                    "bottom": 10
-                }
-            )
-            .configure_view(
-                fill="#00D05E",
-                strokeOpacity=0
-            )
-            .configure_axis(
-                labelColor="#000000",
-                titleColor="#000000",
-                gridColor="rgba(0,0,0,0.2)",
-                domainColor="rgba(0,0,0,0.3)"
-            )
-        )
-
-        st.altair_chart(forecast_chart, use_container_width=True)
-
 
 # =========================================================
 # 4. INVENTORY & STOCK ANALYSIS
@@ -3426,11 +3270,35 @@ elif eda_option == "Inventory & Stock Analysis":
             use_container_width=True
         )
 
+    st.markdown(
+            """
+            <div style="
+                background-color:#2F75B5;
+                padding:28px;
+                border-radius:12px;
+                color:white;
+                font-size:16px;
+                line-height:1.6;
+                margin-bottom:20px;
+            ">
+
+            <b>Inventory & Stock Analysis</b> <br>
+            <li><b>Stock Level by Product Category:</b> Shows the available inventory across product categories and identifies categories holding the highest stock levels.</li>
+            <li><b>Inventory Turnover Analysis:</b> Measures how quickly products are sold and helps identify fast-moving inventory requiring frequent replenishment.</li>
+            <li><b>Stock-Out Frequency Trend:</b> Tracks inventory shortages over time and highlights periods with frequent stock-out occurrences.</li>
+            <li><b>Slow-Moving Products:</b> Identifies products with high remaining stock and low sales activity, indicating potential dead stock risks.</li>
+            <li><b>Evaluates warehouse capacity usage and helps assess storage efficiency and available space.</li>
+            <li><b>Inventory Aging Analysis:</b> Measures how long inventory remains in stock and identifies aging inventory that may require clearance or replenishment adjustments.</li>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+
 # =========================================================
 # Predictive REPLENISHMENT ANALYSIS
 # =========================================================
 
-elif eda_option == "Predictive Replenishment Analysis":
+elif eda_option == "Replenishment Analysis":
 
     st.markdown(
     """
@@ -3937,6 +3805,27 @@ elif eda_option == "Predictive Replenishment Analysis":
             chart_priority,
             use_container_width=True
         )
+    st.markdown(
+                """
+                <div style="
+                    background-color:#2F75B5;
+                    padding:28px;
+                    border-radius:12px;
+                    color:white;
+                    font-size:16px;
+                    line-height:1.6;
+                    margin-bottom:20px;
+                ">
+
+                <b>Demand Analysis</b> <br>
+                <li><b>Stock vs Reorder Point:</b>Compares current inventory levels with reorder thresholds to identify products that require replenishment.</li>
+                <li><b>Recommended Reorder Quantity:</b> Highlights the optimal quantity to reorder for maintaining adequate stock levels and preventing shortages.</li>
+                <li><b>Safety Stock Comparison:</b> Evaluates current inventory against safety stock levels to assess inventory risk and buffer availability.</li>
+                <li><b>Replenishment Priority Heatmap:</b> Identifies high-priority products for replenishment based on stock-out risk and recommended order quantity.</li>
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
 # =========================================================
 # SUPPLIER & LEAD TIME ANALYSIS
 # =========================================================
@@ -4471,7 +4360,32 @@ elif eda_option == "Supplier & Lead Time Analysis":
             chart_perf,
             use_container_width=True
         )
-        
+    st.markdown(
+    """
+    <div style="
+        background-color:#2F75B5;
+        padding:28px;
+        border-radius:12px;
+        color:white;
+        font-size:16px;
+        line-height:1.6;
+        margin-bottom:20px;
+    ">
+
+    <b>Supplier & Lead Time Analysis</b> <br>
+
+    <li><b>Lead Time by Supplier:</b> Analyzes the average delivery lead time of suppliers to identify procurement delays and supplier efficiency.</li>
+
+    <li><b>On-Time Delivery Rate:</b> Evaluates the percentage of deliveries completed on schedule to measure supplier reliability.</li>
+
+    <li><b>Delivery Delay Analysis:</b> Categorizes delivery delays to identify operational bottlenecks and supply chain disruptions.</li>
+
+    <li><b>Supplier Performance Comparison:</b> Compares suppliers based on delivery performance, lead time, and supplier ratings to support supplier selection decisions.</li>
+
+    </div>
+    """,
+    unsafe_allow_html=True
+)
 
 # =========================================================
 # STORE-LEVEL ANALYSIS
@@ -4954,7 +4868,36 @@ elif eda_option == "Store-Level Analysis":
         )
 
         st.altair_chart(chart_replenishment, use_container_width=True)
+    st.markdown(
+    """
+    <div style="
+        background-color:#2F75B5;
+        padding:28px;
+        border-radius:12px;
+        color:white;
+        font-size:16px;
+        line-height:1.6;
+        margin-bottom:20px;
+    ">
 
+    <b>Store-Level Analysis</b> <br>
+
+    <li><b>Store Type Performance:</b> Compares revenue generated across different store types to identify the most profitable store formats.</li>
+
+    <li><b>Store-Wise Sales Performance:</b> Evaluates sales performance across individual stores to identify top-performing and low-performing locations.</li>
+
+    <li><b>City-Wise Sales:</b> Analyzes revenue distribution across cities to understand regional demand and market performance.</li>
+
+    <li><b>Top Store Sales Analysis:</b> Examines sales performance of top stores along with store size to assess operational effectiveness.</li>
+
+    <li><b>Store Inventory Availability:</b> Monitors stock availability across stores to identify locations with high or low inventory levels.</li>
+
+    <li><b>Store Replenishment Efficiency:</b> Measures store-level delivery performance to evaluate replenishment effectiveness and supply chain efficiency.</li>
+
+    </div>
+    """,
+    unsafe_allow_html=True
+)
 # =========================================================
 # EXTERNAL FACTORS IMPACT ANALYSIS
 # =========================================================
@@ -5404,6 +5347,33 @@ elif eda_option == "External Factors Impact Analysis":
             chart_social,
             use_container_width=True
         )
+
+    st.markdown(
+    """
+    <div style="
+        background-color:#2F75B5;
+        padding:28px;
+        border-radius:12px;
+        color:white;
+        font-size:16px;
+        line-height:1.6;
+        margin-bottom:20px;
+    ">
+
+    <b>External Factors Impact Analysis</b><br>
+
+    <li><b>Weather vs Product Category Demand:</b> Analyzes how different weather conditions influence product demand across categories, helping identify seasonal and climate-driven purchasing patterns.</li>
+
+    <li><b>Festival / Event Demand Impact:</b> Measures the effect of festivals and special events on product sales, highlighting periods of increased customer demand and inventory requirements.</li>
+
+    <li><b>Promotion Effectiveness Analysis:</b> Evaluates the impact of promotional campaigns on sales revenue and quantity sold, helping assess marketing performance and promotional ROI.</li>
+
+    <li><b>Social Trend Influence on Demand:</b> Examines how social media platforms and online trends affect product demand, enabling businesses to respond quickly to emerging consumer interests.</li>
+
+    </div>
+    """,
+    unsafe_allow_html=True
+)
 
 elif eda_option == "Summary Report":
     # =========================
