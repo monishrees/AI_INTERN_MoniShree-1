@@ -7,3 +7,6 @@ scikit-learn
 altair
 plotly
 streamlit-option-menu
+prophet
+xgboost
+tensorflow

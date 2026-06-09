@@ -1,0 +1,5 @@
+{
+    "python-envs.defaultEnvManager": "ms-python.python:system",
+    "python.analysis.useLibraryCodeForTypes": true,
+    "python.defaultInterpreterPath": "C:\\Users\\DELL\\AppData\\Local\\Microsoft\\WindowsApps\\python3.11.exe"
+}
